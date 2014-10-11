@@ -84,7 +84,7 @@ int main(){
 	uint32_t shift = 8;		//gpu access bit8
 	void *memchunk = NULL;
 	uint64_t *start_index = (uint64_t *)malloc(sizeof(uint64_t) * ENTRY_NUM * GRID_X);
-	uint64_t times = 1000000000;
+	uint64_t times = 512;//1000000000;
 	int *out = (int *)malloc(sizeof(int) * GRID_X);
 	memset(out, 0, sizeof(int) * GRID_X);
 	memset(start_index, 0, sizeof(uint64_t) * ENTRY_NUM * GRID_X);
@@ -157,6 +157,9 @@ int main(){
 	printf("GPU running time is %.4fs\n", (double)nsdiff/1000000000);
 	printf("*********************bandwidth is %.2fMB/s*********************\n", bandwidth);
 #endif
+	
+	/* kill hs_conflict host process */
+	system("/home/humasama/Documents/HSA_Conflict_TST/multi_host_signal/kill_mc.sh");	
 
 	/* check the outcome */
 #ifdef CHECKOUT
