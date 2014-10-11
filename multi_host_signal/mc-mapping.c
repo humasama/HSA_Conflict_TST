@@ -187,12 +187,12 @@ int main(int argc, char* argv[]){
 	int xor_page_shift = 0;
 	int cpuid;
 	int align_gpu_bank = -8;
-	int opt;
+	int opt, reverse = 0;
 
 	signal(SIGINT, handler);
 
 	/* 'h' is necessary for the third argument of getopt*/
-	while ((opt = getopt(argc, argv, "l:r:s:m:c:i:a:h")) != -1) {
+	while ((opt = getopt(argc, argv, "l:r:s:m:c:i:a:v")) != -1) {
 		switch (opt) {
 			case 'l': /* bank bit */
 				page_shift_l = strtol(optarg, NULL, 0);
@@ -215,18 +215,27 @@ int main(int argc, char* argv[]){
 			case 'a':
 				align_gpu_bank = (int)strtol(optarg, NULL, 0);
 				break;
-			case 'h':
+			case 'v':
+				reverse = 1;
 				break;
 		}
 	}
 
 	int shift;
-	while(1){
-		for(shift = page_shift_l; shift <= page_shift_r; shift ++){
-			access_bank(shift, xor_page_shift, align_gpu_bank, cpuid, repeat);
+	if(!reverse){
+		while(1){
+			for(shift = page_shift_l; shift <= page_shift_r; shift ++){
+				access_bank(shift, xor_page_shift, align_gpu_bank, cpuid, repeat);
+			}
 		}
-
 	}
-	
+	else{
+		while(1){
+			for(shift = page_shift_r; shift >= page_shift_l; shift --){
+				access_bank(shift, xor_page_shift, align_gpu_bank, cpuid, repeat);
+			}
+		}
+	}
+
 	return 0;
 }
