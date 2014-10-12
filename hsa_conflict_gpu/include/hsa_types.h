@@ -1,8 +1,8 @@
 #ifndef _HSA_TYPES_H_
 #define _HSA_TYPES_H_
 
-#define GRID_X 16
-#define WORKGROUP_X 16
+#define GRID_X 2048
+#define WORKGROUP_X 256
 
 typedef uint32_t BrigCodeOffset32_t;
 

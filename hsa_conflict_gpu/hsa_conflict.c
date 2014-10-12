@@ -82,9 +82,9 @@ int main(){
 
 	/* 4. set kernel arguments */
 	uint32_t shift = 8;		//gpu access bit8
-	void *memchunk = NULL;
+	int *memchunk = NULL;
 	uint64_t *start_index = (uint64_t *)malloc(sizeof(uint64_t) * ENTRY_NUM * GRID_X);
-	uint64_t times = 512;//1000000000;
+	uint64_t times = 1000000000;
 	int *out = (int *)malloc(sizeof(int) * GRID_X);
 	memset(out, 0, sizeof(int) * GRID_X);
 	memset(start_index, 0, sizeof(uint64_t) * ENTRY_NUM * GRID_X);
@@ -109,7 +109,7 @@ int main(){
 		void *arg2;
 		void *arg3;
 	} args;
-	args.arg0 = memchunk;
+	args.arg0 = (void *)memchunk;
 	args.arg1 = (void *)start_index;
 	args.arg3 = (void *)&times;
 	args.arg2 = (void *)out;
@@ -142,6 +142,7 @@ int main(){
 	clock_gettime(CLOCK_REALTIME, &start);
 #endif
 
+	printf("start GPU computing......\n");	
 	/* 5. Notify: launch the kernel */
 	packet_type_store_release(&dispatch_packet->header, HSA_PACKET_TYPE_DISPATCH);
 	hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
@@ -160,6 +161,7 @@ int main(){
 	
 	/* kill hs_conflict host process */
 	system("/home/humasama/Documents/HSA_Conflict_TST/multi_host_signal/kill_mc.sh");	
+
 
 	/* check the outcome */
 #ifdef CHECKOUT

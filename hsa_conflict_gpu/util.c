@@ -15,7 +15,7 @@
 
 #define CEIL(val,unit) (((val + unit - 1)/unit)*unit)
 
-uint64_t get_region(void **memchunk, uint64_t *start_index, uint32_t shift, uint64_t grid_x){
+uint64_t get_region(int **memchunk, uint64_t *start_index, uint32_t shift, uint64_t grid_x){
 	
 	void *addr = (void *)0x1000000080000000;
 	
@@ -37,11 +37,14 @@ uint64_t get_region(void **memchunk, uint64_t *start_index, uint32_t shift, uint
 	}
 	
 	//auto page aligned 
-	*memchunk = mmap(0, g_mem_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)addr);
-	if(*memchunk == MAP_FAILED){
+	int *list = mmap(0, g_mem_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)addr);
+	if(list == MAP_FAILED){
 		printf("mmap /dev/mem failed!\n");
 		exit(1);
 	}
+	
+	int oft_idx = (1 << shift) / 4;
+	*memchunk = &list[oft_idx];
 
 	int i = 0;
 	for(; i < ENTRY_NUM - 1; i++){

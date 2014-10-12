@@ -13,7 +13,6 @@
 #define DEFAULT_SHIFT 23	//bank bits : 6~16
 #define ENTRY_DIST (1<<(DEFAULT_SHIFT))
 
-uint64_t get_region(void **memchunk, uint64_t *start_index, uint32_t shift, uint64_t grid_x);
-
+uint64_t get_region(int **memchunk, uint64_t *start_index, uint32_t shift, uint64_t grid_x);
 uint64_t get_elapsed(struct timespec *start, struct timespec *end);
 #endif
