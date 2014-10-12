@@ -79,7 +79,7 @@ uint64_t run(uint64_t iter)
 }
 
 
-void access_bank(int page_shift, int xor_page_shift, int align_gpu_bank, int core, uint64_t repeat)
+void access_bank(int page_shift, int align_gpu_bank, int core, uint64_t repeat)
 {
 	struct sched_param param;
 	cpu_set_t cmask;
@@ -96,14 +96,16 @@ void access_bank(int page_shift, int xor_page_shift, int align_gpu_bank, int cor
 	if (sched_setaffinity(0, num_processors, &cmask) < 0)
 		perror("error");
 
-	g_mem_size += (1 << page_shift) + (1 << xor_page_shift); 	//fix bug of XOR
 
-	/* align base accessing bank of GPU */
+	/* page_shift < 0 : access origin addr, just align GPU */
+	if(page_shift >= 0) g_mem_size += (1 << page_shift);
+	/* align GPU: align base accessing bank of GPU */
 	if(align_gpu_bank >= 0) g_mem_size += (1 << align_gpu_bank);
+
 
 	g_mem_size = CEIL(g_mem_size, ENTRY_DIST);
 
-	/* alloc memory. align to a page boundary */
+	/* alloc memory, align to a page boundary */
 	int fd = open("/dev/mem", O_RDWR | O_SYNC);
 	void *addr = (void *) 0x1000000080000000;
 
@@ -121,21 +123,15 @@ void access_bank(int page_shift, int xor_page_shift, int align_gpu_bank, int cor
 		perror("failed to alloc");
 		exit(1);
 	}
-
-	int off_idx = (1<<page_shift) / 4;
-
-	if (xor_page_shift > 0) {
-		off_idx = ((1<<page_shift) + (1<<xor_page_shift)) / 4;
-	}
-
-#if defined(TEST)
-	printf("/////////////////ENTRY_DIST : %lu\n////////////////", ENTRY_DIST);
-	printf("/////////////////NUM_ENTRIES : %lu\n////////////////", NUM_ENTRIES);
-	printf("/////////////////NUM_ENTRIES * ENTRY_DIST : %lu\n////////////////", NUM_ENTRIES * ENTRY_DIST);
-	printf("/////////////////g_mem_size = NUM_ENTRIES * ENTRY_DIST : %lu\n////////////////", g_mem_size);
-#endif
+	
+	int off_idx = 0;
+	
+	/* access unit is 4Bytes, so page_shift or align_gpu_bank = 0,1 both present access original bank */
+	if(page_shift >= 0 ) off_idx += (1<<page_shift) / 4;
+	if(align_gpu_bank >= 0) off_idx += (1 << align_gpu_bank) / 4;
 
 	list = &memchunk[off_idx];
+	
 	for (i = 0; i < NUM_ENTRIES; i++) {
 		if (i == (NUM_ENTRIES - 1))
 			indices[i] = 0;
@@ -147,6 +143,7 @@ void access_bank(int page_shift, int xor_page_shift, int align_gpu_bank, int cor
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	/* access banks */
+	next = 0;
 	uint64_t naccess = run(repeat);
 
 	clock_gettime(CLOCK_REALTIME, &end);
@@ -154,12 +151,9 @@ void access_bank(int page_shift, int xor_page_shift, int align_gpu_bank, int cor
 	int64_t nsdiff = get_elapsed(&start, &end);
 	double  avglat = (double)nsdiff/naccess;
 
-	//printf("size: %ld (%ld KB)\n", g_mem_size, g_mem_size/1024);
-	//printf("duration %ld ns, #access %ld\n", nsdiff, naccess);
-	//printf("average latency: %ld ns\n", nsdiff/naccess);
-	
-	//printf("bit%d %.2f MB/s\n", page_shift, 64.0*1000.0*(double)naccess/(double)nsdiff);
-	bandwidth[page_shift] = 64.0 * 1000.0 * (double)naccess/(double)nsdiff;
+	if(page_shift >= 0) bandwidth[page_shift] = 64.0 * 1000.0 * (double)naccess/(double)nsdiff;
+	else bandwidth[MAX_BANK_BIT_NUM-1] = 64.0 * 1000.0 * (double)naccess/(double)nsdiff; /* bandwidth[MAX_BANK_BIT_NUM-1] record gpu bank or orginal bank */
+			
 
 	munmap(memchunk, g_mem_size);
 	close(fd);
@@ -183,8 +177,7 @@ int main(int argc, char* argv[]){
 
 	uint64_t repeat = 1000;
 
-	int page_shift_l = 0, page_shift_r = 0;
-	int xor_page_shift = 0;
+	int page_shift_l = -8, page_shift_r = -8;
 	int cpuid;
 	int align_gpu_bank = -8;
 	int opt, reverse = 0;
@@ -199,9 +192,6 @@ int main(int argc, char* argv[]){
 				break;
 			case 'r' :
 				page_shift_r = strtol(optarg, NULL, 0);
-				break;
-			case 's': /* xor-bank bit */
-				xor_page_shift = strtol(optarg, NULL, 0);
 				break;
 			case 'm': /* set memory size */
 				g_mem_size = 1024 * strtol(optarg, NULL, 0);
@@ -225,14 +215,16 @@ int main(int argc, char* argv[]){
 	if(!reverse){
 		while(1){
 			for(shift = page_shift_l; shift <= page_shift_r; shift ++){
-				access_bank(shift, xor_page_shift, align_gpu_bank, cpuid, repeat);
+				if((page_shift_l == -8) && (page_shift_r == -8)) shift = -8;	/* -l -r: no input */
+				access_bank(shift, align_gpu_bank, cpuid, repeat);
 			}
 		}
 	}
 	else{
 		while(1){
 			for(shift = page_shift_r; shift >= page_shift_l; shift --){
-				access_bank(shift, xor_page_shift, align_gpu_bank, cpuid, repeat);
+				if((page_shift_l == -8) && (page_shift_r == -8)) shift = -8;	/* -l -r: no input */
+				access_bank(shift, align_gpu_bank, cpuid, repeat);
 			}
 		}
 	}
