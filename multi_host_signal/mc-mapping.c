@@ -182,17 +182,16 @@ int main(int argc, char* argv[])
 	entry_shift[3] = 26;
 	entry_shift[4] = 27;
 
-	int min_shift = entry_shift[0];
 	min_interval = ((uint64_t)1 << entry_shift[1]) - ((uint64_t)1 << entry_shift[0]);
 	//printf("min_interval = 0x%lx\n", min_interval);
-	//uint64_t farest_dist = 0;
+	farest_dist = 0;
 
 	//printf("****************init entry_dist:\n");
 	for(i = 0; i < NUM_DIST; i ++){
 		j = 0;
 		int index = i;
 		while(index > 0){
-			if(index & 1) entry_dist[i] += (uint64_t)1 << (j + min_shift);
+			if(index & 1) entry_dist[i] += ((uint64_t)1 << entry_shift[j]);
 			j ++;
 			index = index >> 1;
 		}
