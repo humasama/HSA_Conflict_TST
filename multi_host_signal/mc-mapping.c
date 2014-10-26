@@ -104,12 +104,12 @@ void handler(int sig){
 	}
 }
 
-void access_bank(int gpu_shift, int shift, uint64_t iter){
+void access_bank(uint64_t gpu_mask, int shift, uint64_t iter){
 
 	int oft = 0;
-	if(gpu_shift >= 0){ 
-		g_mem_size += (uint64_t)1 << gpu_shift;
-		oft +=  ((uint64_t)1 << gpu_shift) / 4;
+	if(gpu_mask > 0){ 
+		g_mem_size += gpu_mask;
+		oft +=  gpu_mask / 4;
 	}
 	if(shift >= 0){
 		g_mem_size += (uint64_t)1 << shift;
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
 	int cpuid = 0;
 	int opt, i, j;
 
-	uint64_t repeat = 10000;
+	uint64_t repeat = 10000, gpu_mask = 0;
 
 	int page_shift = -1;
 	int shift_l = -1, shift_r = -1;
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 	signal(SIGINT, handler);
 
 	//init entry_shift: increase
-	entry_shift[0] = 23;
+	entry_shift[0] = 22;
 	entry_shift[1] = 24;
 	entry_shift[2] = 25;
 	entry_shift[3] = 26;
@@ -203,9 +203,9 @@ int main(int argc, char* argv[])
 	/*
 	 * get command line options 
 	 */
-	while ((opt = getopt(argc, argv, "b:c:i:l:r:h")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:i:l:r:m:h")) != -1) {
 		switch (opt) {
-			case 'b': /* bank bit */
+			case 'b': /* don't use */
 				page_shift = strtol(optarg, NULL, 0);
 				break;
 			case 'c': /* set CPU affinity */
@@ -225,14 +225,20 @@ int main(int argc, char* argv[])
 			case 'r':
 				shift_r = strtol(optarg, NULL, 0);
 				break;
+			case 'm':
+				gpu_mask = (uint64_t)strtol(optarg, NULL, 0);
+				break;
 		}
 
 	}
 
-
+#if 0
 	/* access bit aligning to GPU */
 	if(page_shift >= 0)
 		printf("align to GPU: access bit %d\n", page_shift);
+#endif
+	printf("gpu mask = 0x%lx\n", gpu_mask);
+
 	if((shift_l < 0) || (shift_r < 0)){
 		printf("illegal l or r!\n");
 		exit(1);
@@ -265,7 +271,7 @@ int main(int argc, char* argv[])
 	
 	while(1){
 		for(i = shift_l; i <= shift_r; i ++){
-			access_bank(page_shift, i, repeat);
+			access_bank(gpu_mask, i, repeat);
 		}
 	}
 
